@@ -7,7 +7,7 @@
     "npm": "11"
   },
   "scripts": {
-    "build": "alley-build build --blocks-manifest",
+    "build": "alley-build build",
     "create-block": "npx @alleyinteractive/create-block@latest -n mantle-editor-relationships --skip-registration",
     "create-entry": "npx @alleyinteractive/create-entry@latest -n mantle-editor-relationships -t mantle-editor-relationships",
     "create-slotfill": "npx @alleyinteractive/create-entry -s -n mantle-editor-relationships -t mantle-editor-relationships",
@@ -20,8 +20,8 @@
     "postinstall": "rm -rf node_modules/.cache/babel-loader && rm -rf node_modules/.cache/webpack",
     "release": "npx @alleyinteractive/create-release@latest",
     "scaffold": "npx @alleyinteractive/scaffolder@latest",
-    "start": "alley-build start --blocks-manifest",
-    "start:hot": "alley-build start --hot --blocks-manifest",
+    "start": "alley-build start",
+    "start:hot": "alley-build start --hot",
     "stylelint": "stylelint \"**/*.scss\" --allow-empty-input",
     "stylelint:fix": "stylelint --fix \"**/*.scss\"",
     "test": "npm run check-types && npm run eslint && npm run stylelint && npm run jest"

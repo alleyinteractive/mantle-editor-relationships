@@ -6,7 +6,6 @@ parameters:
 	level: max
 
 	paths:
-		- blocks/
 		- entries/
 		- src/
 		- mantle-editor-relationships.php

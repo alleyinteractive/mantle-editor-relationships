@@ -55,9 +55,6 @@ if ( ! file_exists( __DIR__ . '/vendor/wordpress-autoload.php' ) ) {
 // Load the plugin's main files.
 require_once __DIR__ . '/src/assets.php';
 require_once __DIR__ . '/src/functions.php';
-require_once __DIR__ . '/src/meta.php';
 require_once __DIR__ . '/src/main.php';
 
-register_post_meta_from_defs();
-register_term_meta_from_defs();
 main();
