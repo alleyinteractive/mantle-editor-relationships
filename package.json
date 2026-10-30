@@ -46,7 +46,7 @@
     "@alleyinteractive/eslint-config": "^0.2.0",
     "@alleyinteractive/stylelint-config": "^0.0.2",
     "@alleyinteractive/tsconfig": "^0.3.0",
-    "@babel/preset-env": "^7.28.3",
+    "@babel/preset-env": "^8.0.7",
     "@jest/globals": "30.5.2",
     "@types/wordpress__block-editor": "^15.0.8",
     "@wordpress/babel-preset-default": "^8.40.1",
