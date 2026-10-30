@@ -1,4 +1,4 @@
-.mantle-editor-relationships__selector .autocomplete-base-control__label {
+.mantle-editor-relationships__panel .components-form-token-field__label {
   border: 0;
   clip-path: inset(50%);
   height: 1px;
@@ -8,4 +8,15 @@
   position: absolute;
   width: 1px;
   white-space: nowrap;
+}
+
+.mantle-editor-relationships__posts {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.mantle-editor-relationships__limit {
+  color: #757575;
+  margin: 0;
 }

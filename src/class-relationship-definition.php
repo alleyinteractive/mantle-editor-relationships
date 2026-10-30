@@ -102,6 +102,11 @@ final readonly class Relationship_Definition {
 			throw new InvalidArgumentException( "{$model}::{$method}() must chain ->uses_terms() to be editable." );
 		}
 
+		// Single relations save their term without appending, which wipes every other relationship term on the post.
+		if ( in_array( $relation_class, [ Belongs_To::class, Has_One::class ], true ) && self::uses_terms( $relation ) ) {
+			throw new InvalidArgumentException( "{$model}::{$method}() cannot be edited with ->uses_terms(); store it in meta instead." );
+		}
+
 		$related = $relation->get_query()->get_model();
 
 		if ( ! is_string( $related ) || ( ! is_subclass_of( $related, Post::class ) && ! is_subclass_of( $related, Term::class ) ) ) {

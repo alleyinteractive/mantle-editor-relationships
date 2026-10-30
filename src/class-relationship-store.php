@@ -33,6 +33,11 @@ final class Relationship_Store {
 	public function read( Relationship_Definition $definition, Post $parent ): int|array|null {
 		$relation = $definition->relation( $parent );
 
+		// Post queries default to published posts, and a write would drop links to anything else.
+		if ( 'post' === $definition->kind ) {
+			$relation->get_query()->where( 'post_status', 'any' );
+		}
+
 		if ( $definition->multiple ) {
 			return array_values(
 				array_map(
@@ -190,7 +195,8 @@ final class Relationship_Store {
 		// Has relationships are stored on the related posts, so each changed post must be editable.
 		$current = $this->current_ids( $definition, $parent );
 		$changed = array_merge( array_diff( $current, $next ), array_diff( $next, $current ) );
-								return array_all( $changed, fn( int $id ) => current_user_can( 'edit_post', $id ) );
+
+		return array_all( $changed, fn ( int $id ): bool => current_user_can( 'edit_post', $id ) );
 	}
 
 	/**

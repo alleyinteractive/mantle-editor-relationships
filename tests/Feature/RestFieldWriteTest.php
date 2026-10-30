@@ -116,6 +116,33 @@ class RestFieldWriteTest extends TestCase {
 		$this->assertSame( [ $t1 ], $this->related( 'tags' ) );
 	}
 
+	public function test_unpublished_related_posts_are_read_and_kept(): void {
+		[ $p1 ]    = $this->pages;
+		$scheduled = static::factory()->page->create( [
+			'post_status' => 'future',
+			'post_date'   => gmdate( 'Y-m-d H:i:s', time() + DAY_IN_SECONDS ),
+		] );
+		$draft     = static::factory()->page->create( [ 'post_status' => 'draft' ] );
+
+		$article = Article::find( $this->article );
+		$article->related_pages()->associate( $scheduled );
+		$article->child_pages()->save( $draft );
+
+		$this->get_json( add_query_arg( 'context', 'edit', rest_url( "wp/v2/posts/{$this->article}" ) ) )
+			->assertJsonPath( 'mantle_relationships.related_pages', [ $scheduled ] )
+			->assertJsonPath( 'mantle_relationships.child_pages', [ $draft ] );
+
+		$this->save( [ 'related_pages' => [ $scheduled, $p1 ] ] )->assertOk();
+
+		$this->assertEqualsCanonicalizing( [ $scheduled, $p1 ], $this->related_any_status( 'related_pages' ) );
+	}
+
+	public function test_write_failure_returns_error(): void {
+		add_filter( 'pre_insert_term', fn (): \WP_Error => new \WP_Error( 'blocked', 'Blocked.' ) );
+
+		$this->save( [ 'related_pages' => [ $this->pages[0] ] ] )->assertStatus( 500 );
+	}
+
 	public function test_unprovided_keys_are_untouched(): void {
 		[ $p1, $p2 ] = $this->pages;
 
@@ -178,6 +205,19 @@ class RestFieldWriteTest extends TestCase {
 			rest_url( "wp/v2/posts/{$this->article}" ),
 			[ 'mantle_relationships' => $values ],
 		);
+	}
+
+	/**
+	 * Read a multiple relationship back through Mantle, including unpublished posts.
+	 *
+	 * @param string $method Relationship method.
+	 * @return list<int>
+	 */
+	private function related_any_status( string $method ): array {
+		$relation = Article::find( $this->article )->{$method}();
+		$relation->get_query()->where( 'post_status', 'any' );
+
+		return $relation->get()->map( fn ( $model ) => $model->id() )->values()->all();
 	}
 
 	/**

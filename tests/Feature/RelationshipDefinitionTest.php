@@ -85,6 +85,17 @@ class RelationshipDefinitionTest extends TestCase {
 		Relationship_Definition::from( Broken_Article::class, 'meta_pages' );
 	}
 
+	public function test_single_relations_using_terms_throw(): void {
+		foreach ( [ 'term_featured_page', 'term_lead_page' ] as $method ) {
+			try {
+				Relationship_Definition::from( Broken_Article::class, $method );
+				$this->fail( "{$method} should not be editable." );
+			} catch ( InvalidArgumentException $e ) {
+				$this->assertStringContainsString( 'uses_terms()', $e->getMessage() );
+			}
+		}
+	}
+
 	public function test_missing_method_throws(): void {
 		$this->expectException( InvalidArgumentException::class );
 

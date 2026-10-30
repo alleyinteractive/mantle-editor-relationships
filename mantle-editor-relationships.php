@@ -27,12 +27,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 define( 'MANTLE_EDITOR_RELATIONSHIPS_DIR', __DIR__ );
 
-// Check if Composer is installed (remove if Composer is not required for your plugin).
 if ( ! file_exists( __DIR__ . '/vendor/wordpress-autoload.php' ) ) {
-	// Will also check for the presence of an already loaded Composer autoloader
-	// to see if the Composer dependencies have been installed in a parent
-	// folder. This is useful for when the plugin is loaded as a Composer
-	// dependency in a larger project.
+	// Dependencies may already be loaded by a parent project's Composer autoloader.
 	if ( ! class_exists( \Composer\InstalledVersions::class ) ) {
 		\add_action(
 			'admin_notices',
@@ -52,7 +48,6 @@ if ( ! file_exists( __DIR__ . '/vendor/wordpress-autoload.php' ) ) {
 	require_once __DIR__ . '/vendor/wordpress-autoload.php';
 }
 
-// Load the plugin's main files.
 require_once __DIR__ . '/src/assets.php';
 require_once __DIR__ . '/src/functions.php';
 require_once __DIR__ . '/src/main.php';

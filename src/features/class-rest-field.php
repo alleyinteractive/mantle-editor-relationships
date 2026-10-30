@@ -15,6 +15,7 @@ use Mantle\Editor_Relationships\Relationship_Definition;
 use Mantle\Editor_Relationships\Relationship_Store;
 use WP_Error;
 use WP_Post;
+use Throwable;
 use WP_REST_Request;
 
 /**
@@ -91,6 +92,7 @@ final readonly class Rest_Field implements Feature {
 	 * Write relationship values for a post.
 	 *
 	 * Every provided value is validated before any is written, so a rejected request changes no relationship.
+	 * A failure partway through writing can still leave earlier relationships written.
 	 *
 	 * @param mixed   $value Field value keyed by relationship method.
 	 * @param WP_Post $post  Post being updated.
@@ -120,8 +122,12 @@ final readonly class Rest_Field implements Feature {
 			$pending[] = [ $definition, $parent, $ids ];
 		}
 
-		foreach ( $pending as [ $definition, $parent, $ids ] ) {
-			$this->store->write( $definition, $parent, $ids );
+		try {
+			foreach ( $pending as [ $definition, $parent, $ids ] ) {
+				$this->store->write( $definition, $parent, $ids );
+			}
+		} catch ( Throwable $e ) {
+			return new WP_Error( 'mantle_relationships_failed', $e->getMessage(), [ 'status' => 500 ] );
 		}
 
 		return true;

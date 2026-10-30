@@ -52,8 +52,8 @@ composer lint:fix     # rector:fix + phpcbf
 composer serve        # wp-env start only (no webpack)
 ```
 
-Run a single PHPUnit test: `vendor/bin/phpunit --filter ExampleUnitTest`.
-Run a test suite: `vendor/bin/phpunit --testsuite Feature` or `--testsuite Unit`.
+Run a single PHPUnit test: `vendor/bin/phpunit --filter RegistryTest`.
+Run a test suite: `vendor/bin/phpunit --testsuite Feature`.
 
 **Scaffolding:**
 ```sh
@@ -82,13 +82,14 @@ If `vendor/` is absent but a parent project has already loaded Composer (i.e. th
 - Features: `Register_Internal_Taxonomy` (registers `mantle_relationship` when no Mantle app has), `Rest_Field` (the `mantle_relationships` field, edit context only), `Editor_Assets` (enqueues `build/relationships-panel/` with the post type's config as `window.mantleEditorRelationships`).
 
 ### Front-end entries
-`entries/relationships-panel/` is the only entry: a `registerPlugin` render of one `PluginDocumentSettingPanel` per relationship, using the `Selector` from `@alleyinteractive/block-editor-tools` and `useEntityProp` on the `mantle_relationships` field. It compiles to `build/relationships-panel/` with an `index.asset.php` map; helpers in `src/assets.php` resolve URLs. Name stylesheets `index.scss` — the build tool splits files named `style.scss` into a separate `style-*` chunk.
+`entries/relationships-panel/` is the only entry: a `registerPlugin` render of one `PluginDocumentSettingPanel` per relationship, editing the `mantle_relationships` field with `useEntityProp`. Post relationships use `PostPicker` from `@alleyinteractive/block-editor-tools` (one per selected post plus an "Add" picker); term relationships use its `TermSelector`, which only reads `selected` on mount. It compiles to `build/relationships-panel/` with an `index.asset.php` map; helpers in `src/assets.php` resolve URLs. Name stylesheets `index.scss` — the build tool splits files named `style.scss` into a separate `style-*` chunk.
 
 ### Tests
 - PSR-4: `Mantle\Editor_Relationships\Tests\` → `tests/` (note: this is `autoload-dev`, not the runtime autoloader).
 - Base class: `tests/TestCase.php` extends `Mantle\Testkit\Test_Case` and uses `Prevent_Remote_Requests`. New tests should extend this, not `Test_Case` directly.
 - `tests/bootstrap.php` uses `Mantle\Testing\manager()` with `maybe_rsync_plugin()` — the test runner rsyncs this plugin into a WordPress install before booting.
-- Feature tests live in `tests/Feature/`; unit tests in `tests/Unit/`. The feature scaffolder generates tests into `tests/Feature/`.
+- Tests live in `tests/Feature/`, with fixture models in `tests/Fixtures/`. The feature scaffolder generates tests into `tests/Feature/`.
+- The plugin sits inside a WordPress install during local development, so the testkit skips its rsync and tries MySQL. Run PHPUnit from a copy outside `wp-content` (CI is unaffected).
 
 ## Conventions to respect
 

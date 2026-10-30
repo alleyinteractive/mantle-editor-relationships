@@ -86,6 +86,7 @@ final readonly class Editor_Assets implements Feature {
 						),
 					),
 				],
+				JSON_HEX_TAG | JSON_HEX_AMP,
 			) . ';',
 			'before',
 		);

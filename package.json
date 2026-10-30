@@ -27,7 +27,7 @@
     "test": "npm run check-types && npm run eslint && npm run stylelint && npm run jest"
   },
   "dependencies": {
-    "@alleyinteractive/block-editor-tools": "^0.15.0",
+    "@alleyinteractive/block-editor-tools": "^0.17.1",
     "@wordpress/block-editor": "^15.13.2",
     "@wordpress/blocks": "^15.13.1",
     "@wordpress/components": "^32.2.1",

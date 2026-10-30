@@ -10,7 +10,9 @@ declare(strict_types=1);
 namespace Mantle\Editor_Relationships\Tests\Fixtures;
 
 use Mantle\Database\Model\Post;
+use Mantle\Database\Model\Relations\Belongs_To;
 use Mantle\Database\Model\Relations\Belongs_To_Many;
+use Mantle\Database\Model\Relations\Has_One;
 use Mantle\Editor_Relationships\Attributes\Editor_Relationship;
 
 /**
@@ -32,5 +34,15 @@ class Broken_Article extends Post {
 	#[Editor_Relationship]
 	public function meta_pages(): Belongs_To_Many {
 		return $this->belongs_to_many( Page::class, null, 'meta_page_ids' );
+	}
+
+	#[Editor_Relationship]
+	public function term_featured_page(): Belongs_To {
+		return $this->belongs_to( Page::class, null, 'term_featured_page_id' )->uses_terms();
+	}
+
+	#[Editor_Relationship]
+	public function term_lead_page(): Has_One {
+		return $this->has_one( Page::class, 'term_lead_article_id' )->uses_terms();
 	}
 }
