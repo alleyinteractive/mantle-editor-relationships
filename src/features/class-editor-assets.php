@@ -66,7 +66,7 @@ final readonly class Editor_Assets implements Feature {
 			$this->warn_if_not_searchable( $definition );
 		}
 
-		wp_enqueue_script( self::HANDLE, $url, get_asset_dependency_array( self::ENTRY ), get_asset_version( self::ENTRY ), true );
+		wp_enqueue_script( self::HANDLE, $url, array_filter( get_asset_dependency_array( self::ENTRY ) ), get_asset_version( self::ENTRY ), true );
 		wp_set_script_translations( self::HANDLE, 'mantle-editor-relationships' );
 		wp_add_inline_script(
 			self::HANDLE,
