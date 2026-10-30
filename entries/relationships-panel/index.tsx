@@ -3,6 +3,7 @@ import { store as editorStore } from '@wordpress/editor';
 import { registerPlugin } from '@wordpress/plugins';
 
 import RelationshipPanel from './panel';
+import './index.scss';
 import './types';
 
 function RelationshipPanels() {

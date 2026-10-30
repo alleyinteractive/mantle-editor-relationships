@@ -68,6 +68,12 @@ final readonly class Editor_Assets implements Feature {
 
 		wp_enqueue_script( self::HANDLE, $url, array_filter( get_asset_dependency_array( self::ENTRY ) ), get_asset_version( self::ENTRY ), true );
 		wp_set_script_translations( self::HANDLE, 'mantle-editor-relationships' );
+
+		$style = get_entry_asset_url( self::ENTRY, 'index.css' );
+
+		if ( '' !== $style ) {
+			wp_enqueue_style( self::HANDLE, $style, [], get_asset_version( self::ENTRY ) );
+		}
 		wp_add_inline_script(
 			self::HANDLE,
 			'window.mantleEditorRelationships = ' . wp_json_encode(

@@ -12,7 +12,7 @@ A WordPress plugin that lets developers expose Mantle model relationships as edi
 - Register features in `src/main.php`.
 - Do NOT add hooks in procedural files.
 - Do NOT modify placeholder tokens unless instructed.
-- Code in `src/` and `blocks/` should follow WordPress coding standards (via `alleyinteractive/alley-coding-standards`), WordPress file name formats, use strict types, and pass PHPStan level max.
+- Code in `src/` should follow WordPress coding standards (via `alleyinteractive/alley-coding-standards`), WordPress file name formats, use strict types, and pass PHPStan level max.
 - Code in `tests/` should extend `tests/TestCase.php`, use Mantle Testkit utilities, and following PSR-4 autoloading (`Mantle\Editor_Relationships\Tests\` → `tests/`).
 - Prefer Mantle APIs over custom implementations.
 - Ensure all PHP passes PHPStan level max.
@@ -45,7 +45,7 @@ npm run stylelint:fix # auto-fix SCSS lint issues
 npm run packages-update  # update @wordpress/* packages to latest (wp-7.0 dist-tag)
 composer test         # runs @lint then @phpunit
 composer phpunit      # PHPUnit only
-composer phpstan      # PHPStan at level `max` (paths: blocks/, entries/, src/, mantle-editor-relationships.php)
+composer phpstan      # PHPStan at level `max` (paths: entries/, src/, mantle-editor-relationships.php)
 composer phpcs        # alley-coding-standards
 composer rector       # dry-run; `composer rector:fix` to apply
 composer lint:fix     # rector:fix + phpcbf
@@ -59,7 +59,6 @@ Run a test suite: `vendor/bin/phpunit --testsuite Feature` or `--testsuite Unit`
 ```sh
 npm run create-entry     # new directory under entries/
 npm run create-slotfill  # new slotfill entry
-npm run create-block     # new block under blocks/
 npm run scaffold         # run @alleyinteractive/scaffolder (reads .scaffolder/)
 ```
 `.scaffolder/plugin-feature/` generates a new `Feature` class in `src/features/` plus a matching test in `tests/Feature/`.
@@ -69,26 +68,21 @@ npm run scaffold         # run @alleyinteractive/scaffolder (reads .scaffolder/)
 ## Architecture
 
 ### Bootstrap flow
-`mantle-editor-relationships.php` (the WordPress entry file) loads Composer's `vendor/wordpress-autoload.php` (from `alleyinteractive/composer-wordpress-autoloader`, which maps `Mantle\Editor_Relationships\` → `src/`), then requires `src/assets.php`, `src/meta.php`, `src/main.php` and calls `main()`, `register_post_meta_from_defs()`, `register_term_meta_from_defs()`.
+`mantle-editor-relationships.php` (the WordPress entry file) loads Composer's `vendor/wordpress-autoload.php` (from `alleyinteractive/composer-wordpress-autoloader`, which maps `Mantle\Editor_Relationships\` → `src/`), then requires `src/assets.php`, `src/functions.php`, `src/main.php` and calls `main()`.
 
 If `vendor/` is absent but a parent project has already loaded Composer (i.e. the plugin is a Composer dependency), bootstrap continues silently; otherwise an admin notice is shown.
 
 ### Feature-based composition
 `src/main.php` constructs an `Alley\WP\Features\Group` (from `alleyinteractive/wp-type-extensions`) containing `Feature` implementations and calls `boot()`. Each feature is a class in `src/features/` implementing `Alley\WP\Types\Feature` with a `boot(): void` method. **To add plugin behavior, create a new `Feature` class (via `npm run scaffold`) and register it in `main()`** — don't add hooks directly in procedural files.
 
-Built-in features:
-- `Register_Block_Manifest` — registers blocks from the Gutenberg block manifest produced by `alley-build --blocks-manifest`. Handles WordPress 6.8+ (`wp_register_block_types_from_metadata_collection()`), 6.7 (`wp_register_block_metadata_collection()`), and older (individual `register_block_type()` calls) transparently.
-- `Load_Entries` — globs `build/**/index.php` and `require_once`s each. APCu caching is enabled in non-local environments (`cache: 'local' !== wp_get_environment_type()` in `main.php`); in local dev, the glob runs on every request.
+### How relationships flow
+- `Attributes\Editor_Relationship` marks a model's relationship method. `Registry` (singleton) discovers attributed methods on models from the `mantle_editor_relationships_models` filter, the Mantle model manifest when a Mantle app is running, and explicit `discover_relationships()` / `register_relationship()` calls (`src/functions.php`).
+- `Relationship_Definition::from()` resolves the relation with `Relation::no_constraints()` and derives the target model, single vs. multiple, and post vs. term. Unsupported relations throw `InvalidArgumentException`, which the registry turns into `_doing_it_wrong`.
+- `Relationship_Store` reads and writes through Mantle's relation APIs (`associate`/`dissociate`/`save`/`remove`) and validates IDs and capabilities before writing.
+- Features: `Register_Internal_Taxonomy` (registers `mantle_relationship` when no Mantle app has), `Rest_Field` (the `mantle_relationships` field, edit context only), `Editor_Assets` (enqueues `build/relationships-panel/` with the post type's config as `window.mantleEditorRelationships`).
 
 ### Front-end entries
-Every directory under `entries/` is a webpack entry point compiled to `build/<name>/` with an `index.asset.php` dependency/version map. An optional `entries/<name>/index.php` is copied to `build/<name>/index.php` and auto-loaded by `Load_Entries` — that's how an entry registers/enqueues itself. Helpers in `src/assets.php` (`get_entry_asset_url`, `get_asset_dependency_array`, `get_asset_version`) read `index.asset.php` and resolve URLs.
-
-### Blocks
-Dynamic blocks live in `blocks/<name>/` (scaffolded by `npm run create-block`).
-
-### Meta
-`config/post-meta.json` and `config/term-meta.json` drive `register_meta_from_file()` from `mantle-framework/support`. Add meta by editing these JSON files — no PHP changes needed. Schema: `https://mantle.alley.com/schema/meta.json`.
-
+`entries/relationships-panel/` is the only entry: a `registerPlugin` render of one `PluginDocumentSettingPanel` per relationship, using the `Selector` from `@alleyinteractive/block-editor-tools` and `useEntityProp` on the `mantle_relationships` field. It compiles to `build/relationships-panel/` with an `index.asset.php` map; helpers in `src/assets.php` resolve URLs. Name stylesheets `index.scss` — the build tool splits files named `style.scss` into a separate `style-*` chunk.
 
 ### Tests
 - PSR-4: `Mantle\Editor_Relationships\Tests\` → `tests/` (note: this is `autoload-dev`, not the runtime autoloader).
@@ -98,9 +92,9 @@ Dynamic blocks live in `blocks/<name>/` (scaffolded by `npm run create-block`).
 
 ## Conventions to respect
 
-- PHP 8.4+, WordPress 6.6+ minimum. Strict types, PHPStan **level max** across `blocks/`, `entries/`, `src/`, `mantle-editor-relationships.php`. New PHP code must pass level max.
+- PHP 8.4+, WordPress 6.6+ minimum. Strict types, PHPStan **level max** across `entries/`, `src/`, `mantle-editor-relationships.php`. New PHP code must pass level max.
 - Namespace is `Mantle\Editor_Relationships\...` with feature classes under `...\Features\`.
-- Coding standard: `alleyinteractive/alley-coding-standards` (WordPress-VIP-flavored). Inline `phpcs:ignore` is used sparingly for unavoidable VIP rules (e.g. dynamic includes in `Load_Entries`).
+- Coding standard: `alleyinteractive/alley-coding-standards` (WordPress-VIP-flavored). Inline `phpcs:ignore` is used sparingly for unavoidable VIP rules.
 - Class files follow WordPress `class-{slug}.php` naming (not PSR-4 filename casing) — the wordpress-autoloader handles both.
 - Node 24 / npm 11 (see `engines` and `.nvmrc`).
 

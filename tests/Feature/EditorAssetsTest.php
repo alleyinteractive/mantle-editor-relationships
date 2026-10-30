@@ -30,6 +30,8 @@ class EditorAssetsTest extends TestCase {
 		discover_relationships( Article::class );
 		wp_dequeue_script( Editor_Assets::HANDLE );
 		wp_deregister_script( Editor_Assets::HANDLE );
+		wp_dequeue_style( Editor_Assets::HANDLE );
+		wp_deregister_style( Editor_Assets::HANDLE );
 	}
 
 	protected function tearDown(): void {
@@ -44,6 +46,7 @@ class EditorAssetsTest extends TestCase {
 		do_action( 'enqueue_block_editor_assets' ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound
 
 		$this->assertTrue( wp_script_is( Editor_Assets::HANDLE, 'enqueued' ) );
+		$this->assertTrue( wp_style_is( Editor_Assets::HANDLE, 'enqueued' ) );
 
 		$inline = implode( "\n", (array) wp_scripts()->get_data( Editor_Assets::HANDLE, 'before' ) );
 

@@ -2,13 +2,13 @@
 
 Contributors: srtfisher
 
-Tags: alleyinteractive, mantle-editor-relationships
+Tags: alleyinteractive, mantle, gutenberg, relationships
 
 Stable tag: 0.0.0
 
-Requires at least: 6.3
+Requires at least: 6.6
 
-Tested up to: 6.7
+Tested up to: 7.1
 
 Requires PHP: 8.4
 
@@ -16,136 +16,115 @@ License: GPL v2 or later
 
 [![Testing Suite](https://github.com/alleyinteractive/mantle-editor-relationships/actions/workflows/all-pr-tests.yml/badge.svg?branch=develop)](https://github.com/alleyinteractive/mantle-editor-relationships/actions/workflows/all-pr-tests.yml)
 
-Edit Mantle model relationships in the block editor..
+Edit [Mantle](https://mantle.alley.com/) model relationships in the block editor.
+
+Mantle relationships (`has_one()`, `has_many()`, `belongs_to()`, `belongs_to_many()`) are normally set in PHP. This plugin lets you opt individual relationships in to the block editor: each one gets a panel in the post's settings sidebar where editors can search for and pick related posts or terms. Selections are saved with the post through Mantle's own relation APIs, so `$article->related_articles` returns exactly what the editor picked.
 
 ## Installation
-
-You can install the package via Composer:
 
 ```bash
 composer require alleyinteractive/mantle-editor-relationships
 ```
 
+Activate the plugin in WordPress. It depends on `mantle-framework/database` and does not require a full Mantle application.
+
 ## Usage
 
-Activate the plugin in WordPress and use it like so:
+Add the `#[Editor_Relationship]` attribute to a relationship method on a post model:
 
 ```php
-$plugin = Create_WordPress_Plugin\Editor_Relationships\Editor_Relationships();
-$plugin->perform_magic();
+use Mantle\Database\Model\Post;
+use Mantle\Database\Model\Relations\Belongs_To;
+use Mantle\Database\Model\Relations\Belongs_To_Many;
+use Mantle\Database\Model\Relations\Has_Many;
+use Mantle\Editor_Relationships\Attributes\Editor_Relationship;
+
+class Article extends Post {
+	public static $object_name = 'post';
+
+	#[Editor_Relationship( label: 'Featured Page' )]
+	public function featured_page(): Belongs_To {
+		return $this->belongs_to( Page::class, null, 'featured_page_id' );
+	}
+
+	#[Editor_Relationship( label: 'Related Articles', max: 3 )]
+	public function related_articles(): Belongs_To_Many {
+		return $this->belongs_to_many( Article::class, null, 'related_article_ids' )->uses_terms();
+	}
+
+	#[Editor_Relationship]
+	public function tags(): Has_Many {
+		return $this->has_many( Tag::class );
+	}
+}
 ```
 
-## Development
+The attribute accepts an optional `label` (defaults to a headline of the method name, e.g. "Related Articles") and `max`, the most items that can be selected.
 
-To setup a WordPress installation and run the plugin in a local environment, you
-can use `wp-env` via the `composer dev` command:
+Then tell the plugin about the model. In a Mantle application, models from the model manifest and the `models.register` config are discovered automatically. Anywhere else, use the filter or the helper:
 
-```sh
-npm install
-composer dev
+```php
+add_filter( 'mantle_editor_relationships_models', fn ( array $models ) => [ ...$models, Article::class ] );
+
+// Or, after plugins load:
+Mantle\Editor_Relationships\discover_relationships( Article::class );
 ```
 
-The command will start a local WordPress environment with the plugin activated
-while also running the front-end assets build process. You can also run `npm run
-start` to start the front-end assets build process separately. The front-end
-assets will be compiled into the `build` directory and will be enqueued
-automatically by the plugin.
+To opt in a relationship without the attribute, such as one on a model you don't own, register it directly:
 
-## Registering Meta
+```php
+Mantle\Editor_Relationships\register_relationship( Article::class, 'featured_page', [ 'label' => 'Featured Page', 'max' => 1 ] );
+```
 
-The plugin supports registering post and term meta via JSON files located in the
-`config` directory. Out of the box, the plugin will look for
-`config/post-meta.json` for post meta and `config/term-meta.json` for term meta.
+### Supported relationships
+
+The parent must be a `Mantle\Database\Model\Post`. The related model can be a post or a term model.
+
+| Relation | Editor control | Where the data is stored |
+| --- | --- | --- |
+| `belongs_to()` | Single | Meta on the post being edited, or the internal relationship taxonomy with `->uses_terms()` |
+| `belongs_to_many()->uses_terms()` | Multiple | The internal relationship taxonomy on the post being edited |
+| `has_one()` | Single | Meta on the related post, or the internal relationship taxonomy with `->uses_terms()` |
+| `has_many()` | Multiple | Meta on the related posts, the internal relationship taxonomy with `->uses_terms()`, or core terms when relating to a term model |
+
+A few things to know:
+
+- `belongs_to_many()` must chain `->uses_terms()`. A meta-backed `belongs_to_many()` only reads back its first value, so the plugin refuses to register it.
+- Two `belongs_to*()` relationships to the same model need distinct local keys, otherwise they share the same meta key (`featured_page_id` and `related_article_ids` above).
+- `has_one()` and `has_many()` relating to posts are stored on the related posts, so saving one requires the user to be able to edit every post being added or removed.
+- The related post type or taxonomy must be registered with `show_in_rest`, since the editor searches it through the REST API.
+- Related items are returned in the related model's default query order, not the order they were picked in.
+- Relationship changes are saved when the post is saved; autosaves and previews do not include them.
+
+### REST API
+
+Each post type with editable relationships gets a `mantle_relationships` field in the `edit` context, keyed by relationship method. Single relationships are an ID or `null`; multiple relationships are a list of IDs.
 
 ```json
 {
-  "$schema": "https://mantle.alley.com/schema/meta.json",
-  "example_meta_key": {
-    "post_types": "article",
-    "type": "string"
-  },
-  "another_meta_key": {
-    "post_types": [ "article", "page" ],
-    "type": "number",
-    "single": false,
-    "default": 0
+  "mantle_relationships": {
+    "featured_page": 12,
+    "related_articles": [ 34, 56 ],
+    "tags": [ 7 ]
   }
 }
 ```
 
-For more information on how to register meta via JSON files,
-[see the documentation](https://mantle.alley.com/docs/features/support/helpers#register_meta_from_file).
+Sending the field in an update replaces the relationships it includes and leaves the others alone. Every value is validated before any relationship is written.
 
-## The `entries` directory and entry points
-
-All directories created in the `entries` directory can serve as entry points and will be compiled with [@wordpress/scripts](https://github.com/WordPress/gutenberg/blob/trunk/packages/scripts/README.md#scripts) into the `build` directory with an accompanied `index.asset.php` asset map.
-
-### Scaffolding an entry point
-
-To generate a new entry point, run the following command:
+## Development
 
 ```sh
-npm run create-entry
+npm install
+composer install
+composer dev
 ```
 
-To generate a new slotfill, run the following command:
-
-```sh
-npm run create-slotfill
-```
-
-The command will prompt the user through several options for creating an entry or slotfill. The entries are scaffolded with the `@alleyinteractive/create-entry` script. Run the help command to see all the options:
-
-```sh
-npx @alleyinteractive/create-entry --help
-```
-[Visit the package README](https://www.npmjs.com/package/@alleyinteractive/create-entry) for more information.
-
-### Enqueuing Entry Points
-
-You can also include an `index.php` file in the entry point directory for enqueueing or registering a script. This file will then be moved to the build directory and will be auto-loaded with the `load_scripts()` function in the `functions.php` file. Alternatively, if a script is to be enqueued elsewhere there are helper functions in the `src/assets.php` file for getting the assets.
-
-### Scaffold a dynamic block with `create-block`
-
-Use the `create-block` command to create custom blocks with [@alleyinteractive/create-block](https://github.com/alleyinteractive/alley-scripts/tree/main/packages/create-block) script and follow the prompts to generate all the block assets in the `blocks/` directory.
-Block registration, script creation, etc will be scaffolded from the `create-block` script. Run `npm run build` to compile and build the custom block. Blocks are enqueued using the `load_scripts()` function in `src/assets.php`.
-
-### Updating WordPress Dependencies
-
-Update the [WordPress dependency packages](https://developer.wordpress.org/block-editor/reference-guides/packages/packages-scripts/#packages-update) used in the project to their latest version.
-
-To update `@wordpress` dependencies to their latest version use the packages-update command:
-
-```sh
-npx wp-scripts packages-update
-```
-
-This script provides the following custom options:
-
--   `--dist-tag` – allows specifying a custom dist-tag when updating npm packages. Defaults to `latest`. This is especially useful when using [`@wordpress/dependency-extraction-webpack-plugin`](https://www.npmjs.com/package/@wordpress/dependency-extraction-webpack-plugin). It lets installing the npm dependencies at versions used by the given WordPress major version for local testing, etc. Example:
-
-```sh
-npx wp-scripts packages-update --dist-tag=wp-WPVERSION`
-```
-
-Where `WPVERSION` is the version of WordPress you are targeting. The version
-must include both the major and minor version (e.g., `7.0`). For example:
-
-```sh
-npx wp-scripts packages-update --dist-tag=wp-7.0`
-```
+`composer dev` starts a `wp-env` environment with the plugin activated and runs the front-end build in watch mode. The editor panel lives in `entries/relationships-panel/` and is built to `build/relationships-panel/`.
 
 ## Testing
 
-Run `npm run test` to run Jest tests against JavaScript files. Run
-`npm run test:watch` to keep the test runner open and watching for changes.
-
-Run `npm run lint` to run ESLint against all JavaScript files. Linting will also
-happen when running development or production builds.
-
-Run `composer test` to run tests against PHPUnit and the PHP code in the plugin.
-Unit testing code is written in PSR-4 format and can be found in the `tests`
-directory.
+Run `npm test` for TypeScript checks, ESLint, Stylelint and Jest, and `composer test` for phpcs, PHPStan, Rector and PHPUnit.
 
 ## Releasing the Plugin
 
