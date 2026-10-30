@@ -13,6 +13,8 @@ use Alley\WP\Types\Feature;
 use Mantle\Editor_Relationships\Registry;
 use Mantle\Editor_Relationships\Relationship_Definition;
 use Mantle\Editor_Relationships\Relationship_Store;
+use WP_Error;
+use WP_Post;
 use WP_REST_Request;
 
 /**
@@ -51,8 +53,9 @@ final readonly class Rest_Field implements Feature {
 				$post_type,
 				self::FIELD,
 				[
-					'get_callback' => fn ( array $post, string $field, WP_REST_Request $request ): array => $this->get_value( $post_type, $post, $request ),
-					'schema'       => $this->schema( $post_type ),
+					'get_callback'    => fn ( array $post, string $field, WP_REST_Request $request ): array => $this->get_value( $post_type, $post, $request ),
+					'update_callback' => $this->update_value( ... ),
+					'schema'          => $this->schema( $post_type ),
 				],
 			);
 		}
@@ -82,6 +85,46 @@ final readonly class Rest_Field implements Feature {
 		}
 
 		return $values;
+	}
+
+	/**
+	 * Write relationship values for a post.
+	 *
+	 * Every provided value is validated before any is written, so a rejected request changes no relationship.
+	 *
+	 * @param mixed   $value Field value keyed by relationship method.
+	 * @param WP_Post $post  Post being updated.
+	 */
+	public function update_value( mixed $value, WP_Post $post ): true|WP_Error {
+		if ( ! is_array( $value ) ) {
+			return true;
+		}
+
+		$definitions = $this->registry->for_post_type( $post->post_type );
+		$pending     = [];
+
+		foreach ( $value as $method => $ids ) {
+			$definition = $definitions[ $method ] ?? null;
+			$parent     = $definition?->model::find( $post->ID );
+
+			if ( ! $definition || ! $parent ) {
+				continue;
+			}
+
+			$valid = $this->store->validate( $definition, $parent, $ids );
+
+			if ( is_wp_error( $valid ) ) {
+				return $valid;
+			}
+
+			$pending[] = [ $definition, $parent, $ids ];
+		}
+
+		foreach ( $pending as [ $definition, $parent, $ids ] ) {
+			$this->store->write( $definition, $parent, $ids );
+		}
+
+		return true;
 	}
 
 	/**
