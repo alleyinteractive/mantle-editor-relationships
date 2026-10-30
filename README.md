@@ -14,7 +14,10 @@ Requires PHP: 8.4
 
 License: GPL v2 or later
 
-[![Testing Suite](https://github.com/alleyinteractive/mantle-editor-relationships/actions/workflows/all-pr-tests.yml/badge.svg?branch=develop)](https://github.com/alleyinteractive/mantle-editor-relationships/actions/workflows/all-pr-tests.yml)
+[![Testing Suite](https://github.com/alleyinteractive/mantle-editor-relationships/actions/workflows/all-pr-tests.yml/badge.svg?branch=main)](https://github.com/alleyinteractive/mantle-editor-relationships/actions/workflows/all-pr-tests.yml)
+
+> [!WARNING]
+> **Work in progress.** This plugin is under active development and is not ready for production use. Its PHP API, REST field, storage rules, and editor UI may change without notice.
 
 Edit [Mantle](https://mantle.alley.com/) model relationships in the block editor.
 
