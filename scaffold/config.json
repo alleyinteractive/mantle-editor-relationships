@@ -1,0 +1,7 @@
+{
+  "core_term_meta": true,
+  "domain": "mantle-editor-relationships",
+  "folder": "src",
+  "namespace": "Editor_Relationships",
+  "require_path": "__DIR__"
+}
