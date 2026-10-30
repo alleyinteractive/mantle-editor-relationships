@@ -1,6 +1,6 @@
+import { useCurrentPostId } from '@alleyinteractive/block-editor-tools';
 import { useEntityProp } from '@wordpress/core-data';
-import { useSelect } from '@wordpress/data';
-import { PluginDocumentSettingPanel, store as editorStore } from '@wordpress/editor';
+import { PluginDocumentSettingPanel } from '@wordpress/editor';
 
 import PostRelationship from './post-relationship';
 import TermRelationship from './term-relationship';
@@ -19,10 +19,7 @@ export default function RelationshipPanel({ config, postType }: PanelProps) {
     (next: RelationshipValues) => void,
     unknown,
   ];
-  const currentPostId = useSelect(
-    (select) => select(editorStore).getCurrentPostId(),
-    [],
-  ) as number;
+  const currentPostId = useCurrentPostId() ?? 0;
 
   const ids = toIds(values?.[name]);
   const onChange = (next: number[]) => {

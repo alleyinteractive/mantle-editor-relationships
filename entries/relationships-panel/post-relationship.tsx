@@ -1,7 +1,20 @@
 import { PostPicker } from '@alleyinteractive/block-editor-tools';
+import { decodeEntities } from '@wordpress/html-entities';
 import { __, sprintf } from '@wordpress/i18n';
 
 import type { RelationshipConfig } from './types';
+
+type PreviewPost = { title?: { rendered?: string } };
+
+function CompactPreview(post: object) {
+  const title = decodeEntities((post as PreviewPost).title?.rendered ?? '');
+
+  return (
+    <div className="mantle-editor-relationships__item-title">
+      {title !== '' ? title : __('(no title)', 'mantle-editor-relationships')}
+    </div>
+  );
+}
 
 type PostRelationshipProps = {
   config: RelationshipConfig;
@@ -42,11 +55,13 @@ export default function PostRelationship({
       {ids.map((id, index) => (
         <PostPicker
           key={id}
+          className="mantle-editor-relationships__item"
           allowedTypes={[subtype]}
           getPostType={getPostType}
           modalFormat="list"
           onReset={() => onChange(ids.filter((_, i) => i !== index))}
           onUpdate={(next) => onChange(ids.map((current, i) => (i === index ? next : current)))}
+          previewRender={CompactPreview}
           resetText={__('Remove', 'mantle-editor-relationships')}
           suppressPostIds={suppressPostIds}
           value={id}

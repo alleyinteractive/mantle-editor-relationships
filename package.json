@@ -35,6 +35,7 @@
     "@wordpress/data": "^10.40.1",
     "@wordpress/edit-post": "^8.40.2",
     "@wordpress/editor": "^14.40.2",
+    "@wordpress/html-entities": "^4.40.1",
     "@wordpress/i18n": "^6.13.1",
     "@wordpress/plugins": "^7.40.1",
     "react": "^18.3.1",
