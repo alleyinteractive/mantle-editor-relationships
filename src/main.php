@@ -16,6 +16,7 @@ function main(): void {
 	$plugin = new Group(
 		new Features\Register_Internal_Taxonomy(),
 		new Features\Rest_Field( Registry::instance(), new Relationship_Store() ),
+		new Features\Editor_Assets( Registry::instance() ),
 	);
 
 	$plugin->boot();
