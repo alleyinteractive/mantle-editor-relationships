@@ -23,6 +23,8 @@ Edit [Mantle](https://mantle.alley.com/) model relationships in the block editor
 
 Mantle relationships (`has_one()`, `has_many()`, `belongs_to()`, `belongs_to_many()`) are normally set in PHP. This plugin lets you opt individual relationships in to the block editor: each one gets a panel in the post's settings sidebar. Related posts are picked with the [`PostPicker`](https://github.com/alleyinteractive/alley-scripts/tree/main/packages/block-editor-tools) search modal (one per related post, each with Replace and Remove), and related terms with the `TermSelector` token field. Selections are saved with the post through Mantle's own relation APIs, so `$article->related_articles` returns exactly what the editor picked.
 
+![The block editor with relationship panels in the post settings sidebar](.github/images/editor.png)
+
 ## Installation
 
 ```bash
@@ -89,6 +91,8 @@ The parent must be a `Mantle\Database\Model\Post`. The related model can be a po
 | `has_one()` | One-to-one | Single | Meta on the related post |
 | `has_many()` | One-to-many | Multiple | Meta on the related posts, the internal relationship taxonomy with `->uses_terms()`, or core terms when relating to a term model |
 | `belongs_to_many()->uses_terms()` | Many-to-many | Multiple | The internal relationship taxonomy on the post being edited |
+
+<img src=".github/images/panels.png" alt="Relationship panels for a single page, a single lead page, multiple related articles, multiple child pages, and topic terms" width="280">
 
 A few things to know:
 
