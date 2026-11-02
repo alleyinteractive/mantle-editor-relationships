@@ -1,0 +1,155 @@
+<?php
+/**
+ * Seeder class file.
+ *
+ * @package Mantle
+ */
+
+namespace Mantle\Database;
+
+use InvalidArgumentException;
+use Mantle\Console\Command;
+use Mantle\Contracts\Container;
+use Mantle\Database\Factory\Factory_Container;
+use Mantle\Support\Arr;
+
+/**
+ * Base Database Seeder
+ */
+abstract class Seeder {
+	/**
+	 * The container instance.
+	 */
+	protected ?Container $container = null;
+
+	/**
+	 * The console command instance.
+	 */
+	protected ?Command $command = null;
+
+	/**
+	 * Factory Instance.
+	 */
+	protected static ?Factory_Container $factory = null;
+
+	/**
+	 * Seed the given connection from the given path.
+	 *
+	 * @param array<class-string>|class-string $class Seed to run.
+	 * @param bool                             $silent Flag if the seed should be silent.
+	 * @param array<mixed>                     $parameters Parameters to pass to the seeder.
+	 */
+	public function call( array|string $class, bool $silent = false, array $parameters = [] ): static {
+		$classes = Arr::wrap( $class );
+
+		foreach ( $classes as $class ) {
+			$seeder = $this->resolve( $class );
+			$name   = $seeder::class;
+
+			if ( ! $silent && $this->command instanceof \Mantle\Console\Command ) {
+				$this->command->line( "Seeding: {$name}" );
+			}
+
+			$start_time = microtime( true );
+
+			$seeder( $parameters );
+
+			$elapsed = microtime( true ) - $start_time;
+
+			$run_time = $elapsed < 1 ? number_format( $elapsed * 1000, 2 ) . ' ms' : number_format( $elapsed, 2 ) . ' seconds';
+
+			if ( ! $silent && $this->command instanceof \Mantle\Console\Command ) {
+				$this->command->line( "Seeded: {$name} ({$run_time})" );
+			}
+		}
+
+		return $this;
+	}
+
+	/**
+	 * Run the given seeder class with the given arguments.
+	 *
+	 * @param array<class-string>|class-string $class Seed to run.
+	 * @param array<mixed>                     $parameters Parameters to pass to the seeder.
+	 */
+	public function call_with( array|string $class, array $parameters = [] ): static {
+		return $this->call( $class, false, $parameters );
+	}
+
+	/**
+	 * Resolve an instance of the given seeder class.
+	 *
+	 * @throws InvalidArgumentException If the class is not an instance of Seeder.
+	 *
+	 * @param  class-string $class Seeder class to resolve.
+	 */
+	protected function resolve( string $class ): Seeder {
+		$instance = $this->container instanceof \Mantle\Contracts\Container ? $this->container->make( $class ) : new $class();
+
+		if ( ! $instance instanceof Seeder ) {
+			throw new InvalidArgumentException( "Class [{$class}] must be an instance of " . self::class );
+		}
+
+		if ( $this->container instanceof \Mantle\Contracts\Container ) {
+			$instance->set_container( $this->container );
+		}
+
+		if ( $this->command instanceof \Mantle\Console\Command ) {
+			$instance->set_command( $this->command );
+		}
+
+		return $instance;
+	}
+
+	/**
+	 * Set the IoC container instance.
+	 *
+	 * @param Container $container IoC container.
+	 */
+	public function set_container( Container $container ): static {
+		$this->container = $container;
+
+		return $this;
+	}
+
+	/**
+	 * Set the command instance instance.
+	 *
+	 * @param Command $command
+	 */
+	public function set_command( Command $command ): static {
+		$this->command = $command;
+
+		return $this;
+	}
+
+	/**
+	 * Run the database seeds.
+	 *
+	 * @param array<mixed> $parameters Parameters to pass to the seeder.
+	 *
+	 * @throws InvalidArgumentException Thrown on bad seeder class.
+	 */
+	public function __invoke( array $parameters = [] ): mixed {
+		if ( ! method_exists( $this, 'run' ) ) {
+			throw new InvalidArgumentException( 'Method [run] missing from ' . static::class );
+		}
+
+		return $this->container instanceof \Mantle\Contracts\Container
+			? $this->container->call( [ $this, 'run' ], $parameters )
+			: $this->run( $parameters );
+	}
+
+	/**
+	 * Fetches the factory object for generating WordPress fixtures.
+	 *
+	 * @throws InvalidArgumentException If the container is not set.
+	 */
+	protected function factory(): Factory_Container {
+		if ( ! $this->container instanceof \Mantle\Contracts\Container ) {
+			throw new InvalidArgumentException( 'Container not set to instantiate factory.' );
+		}
+
+		return $this->container->make( Factory_Container::class );
+	}
+}
